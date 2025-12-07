@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -32,7 +33,7 @@
         <!-- Add Task Form -->
         <section class="form-section">
             <h2>Add a New Task</h2>
-            <form method="POST" class="task-form">
+            <form method="POST" action="{{ url_for('add_task') }}" class="task-form">
                 <div class="form-group">
                     <input 
                         type="text" 
@@ -62,6 +63,13 @@
 
                 <button type="submit" class="btn btn-primary">➕ Add Task</button>
             </form>
+
+            <!-- ✅ Clear All Tasks Button -->
+            <form method="POST" action="{{ url_for('clear_tasks') }}" style="margin-top:10px;">
+                <button type="submit" class="btn btn-outline-danger" style="border:2px solid red; background-color:transparent; color:red; padding:8px 12px; border-radius:4px;">
+                    🗑️ Clear All Tasks
+                </button>
+            </form>
         </section>
 
         <!-- Task List -->
@@ -70,14 +78,14 @@
             {% if tasks %}
                 <ul class="task-list">
                     {% for task in tasks %}
-                        <li class="task-item {% if task.completed %}completed{% endif %} priority-{{ task.priority.lower() }}">
+                        <li class="task-item {% if task.status == 'complete' %}completed{% endif %} priority-{{ task.priority.lower() }}">
                             <div class="task-content">
                                 <!-- Checkbox to mark complete -->
-                                <form method="POST" action="/complete/{{ task.id }}" style="display:inline;">
+                                <form method="GET" action="{{ url_for('toggle_status', task_id=loop.index0) }}" style="display:inline;">
                                     <input 
                                         type="checkbox" 
                                         class="task-checkbox" 
-                                        {% if task.completed %}checked{% endif %}
+                                        {% if task.status == 'complete' %}checked{% endif %}
                                         onchange="this.form.submit()"
                                     >
                                 </form>
@@ -98,8 +106,8 @@
 
                             <!-- Actions -->
                             <div class="task-actions">
-                                <a href="/edit/{{ task.id }}" class="btn-icon edit-btn" title="Edit task">✏️</a>
-                                <form method="POST" action="/delete/{{ task.id }}" style="display:inline;" onsubmit="return confirm('Delete this task?');">
+                                <a href="{{ url_for('edit_task', task_id=loop.index0) }}" class="btn-icon edit-btn" title="Edit task">✏️</a>
+                                <form method="GET" action="{{ url_for('delete_task', task_id=loop.index0) }}" style="display:inline;" onsubmit="return confirm('Delete this task?');">
                                     <button type="submit" class="btn-icon delete-btn" title="Delete task">🗑️</button>
                                 </form>
                             </div>
