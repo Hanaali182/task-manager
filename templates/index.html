@@ -1,0 +1,115 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📋 Task Manager</h1>
+            <p class="subtitle">Keep track of your tasks efficiently</p>
+        </header>
+
+        <!-- Stats -->
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-label">Total</span>
+                <span class="stat-value">{{ total }}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Completed</span>
+                <span class="stat-value">{{ completed }}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Remaining</span>
+                <span class="stat-value">{{ total - completed }}</span>
+            </div>
+        </div>
+
+        <!-- Add Task Form -->
+        <section class="form-section">
+            <h2>Add a New Task</h2>
+            <form method="POST" class="task-form">
+                <div class="form-group">
+                    <input 
+                        type="text" 
+                        name="title" 
+                        placeholder="What's on your mind?" 
+                        required 
+                        maxlength="100"
+                        class="form-input"
+                    >
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="priority">Priority</label>
+                        <select name="priority" id="priority" class="form-select">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="due_date">Due Date</label>
+                        <input type="date" name="due_date" id="due_date" class="form-input">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">➕ Add Task</button>
+            </form>
+        </section>
+
+        <!-- Task List -->
+        <section class="task-list-section">
+            <h2>Your Tasks</h2>
+            {% if tasks %}
+                <ul class="task-list">
+                    {% for task in tasks %}
+                        <li class="task-item {% if task.completed %}completed{% endif %} priority-{{ task.priority.lower() }}">
+                            <div class="task-content">
+                                <!-- Checkbox to mark complete -->
+                                <form method="POST" action="/complete/{{ task.id }}" style="display:inline;">
+                                    <input 
+                                        type="checkbox" 
+                                        class="task-checkbox" 
+                                        {% if task.completed %}checked{% endif %}
+                                        onchange="this.form.submit()"
+                                    >
+                                </form>
+
+                                <!-- Task details -->
+                                <div class="task-details">
+                                    <span class="task-title">{{ task.title }}</span>
+                                    <div class="task-meta">
+                                        <span class="priority priority-{{ task.priority.lower() }}">
+                                            🎯 {{ task.priority }}
+                                        </span>
+                                        {% if task.due_date %}
+                                            <span class="due-date">📅 {{ task.due_date }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="task-actions">
+                                <a href="/edit/{{ task.id }}" class="btn-icon edit-btn" title="Edit task">✏️</a>
+                                <form method="POST" action="/delete/{{ task.id }}" style="display:inline;" onsubmit="return confirm('Delete this task?');">
+                                    <button type="submit" class="btn-icon delete-btn" title="Delete task">🗑️</button>
+                                </form>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="no-tasks">No tasks yet! ✨ Add one to get started.</p>
+            {% endif %}
+        </section>
+    </div>
+</body>
+</html>

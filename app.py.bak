@@ -1,0 +1,55 @@
+﻿import json
+import os
+from flask import Flask, render_template, request, redirect, url_for
+
+TASK_FILE = "tasks.json"
+
+def load_tasks():
+    if os.path.exists(TASK_FILE):
+        with open(TASK_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
+
+def save_tasks(tasks):
+    with open(TASK_FILE, "w", encoding="utf-8") as f:
+        json.dump(tasks, f, ensure_ascii=False, indent=2)
+
+app = Flask(__name__, template_folder="Templates")  # or remove template_folder if you rename the folder to `templates`
+tasks = load_tasks()
+
+@app.route("/", methods=["GET", "POST"])
+def home():
+    if request.method == "POST":
+        task = request.form.get("task")
+        if task:
+            tasks.append(task)
+            save_tasks(tasks)
+        return redirect(url_for("home"))
+    return render_template("index.html", tasks=tasks)
+
+@app.route("/ping")
+def ping():
+    return "pong"
+
+import socket
+import webbrowser
+
+def get_local_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # doesn't actually send packets, just used to determine a suitable outbound interface
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
+
+if __name__ == "__main__":
+    local_ip = get_local_ip()
+    print(f" * Running on http://127.0.0.1:5000 (loopback)")
+    print(f" * Running on http://{local_ip}:5000 (LAN)")
+    # Optionally open the LAN URL in your default browser:
+    # webbrowser.open(f"http://{local_ip}:5000/")
+    app.run(debug=True, host="0.0.0.0", port=5000)
+
