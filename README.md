@@ -22,22 +22,32 @@ A feature-rich task management application built with **Flask**.
 
 ---
 
-### Installation (First Time Only)
+### Quick Start (Clone & Run in 3 Commands)
+```bash
+# 1. Clone the repository
+git clone https://github.com/YOUR_USERNAME/flask-task-manager.git
+cd flask-task-manager
 
-#### Windows PowerShell
-```powershell
-# 1. Create virtual environment
-python -m venv .venv
+# 2. Create and activate virtual environment
+python -m venv .venv && .\.venv\Scripts\Activate.ps1   # (Windows)
+# OR
+python3 -m venv .venv && source .venv/bin/activate     # (Linux/Mac)
 
-# 2. Allow script execution for this session
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-
-# 3. Activate virtual environment
-. .\.venv\Scripts\Activate.ps1
-
-# 4. Install dependencies
+# 3. Install dependencies and run
 pip install -r requirements.txt
-
-
-# Inside your virtual environment
 python app.py
+
+
+## 🚀 Deployment Pipeline (Auto-Update)
+
+This project is connected to **Render** for continuous deployment. Here’s how it works:
+
+1. **Local Development**  
+   Make changes in VS Code (e.g., edit `app.py`, templates, or CSS).
+
+2. **Push to GitHub**  
+   ```bash
+   git add .
+   git commit -m "Describe your change"
+   git push
+
