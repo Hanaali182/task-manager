@@ -1,11 +1,12 @@
 
 import os
 import ssl
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 
 from flask import Flask, render_template, request, redirect, url_for, abort
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import make_url
+
 
 app = Flask(__name__)
 app.config["HOMEPAGE_MESSAGE"] = "Hello from Flask + DevOps CI/CD (v2)"
@@ -40,7 +41,7 @@ else:
     SQLALCHEMY_URL = normalize_dsn(RAW_DSN)
 
 # ---------- TLS decision for external Postgres ----------
-CONNECT_ARGS: Dict[str, object] = {}
+CONNECT_ARGS: Dict[str, Any] = {}
 
 try:
     url_obj = make_url(SQLALCHEMY_URL)
@@ -53,6 +54,7 @@ except Exception:
     is_external_render = False
 
 if is_postgres and is_external_render:
+    # External Postgres: enforce TLS verification
     ctx = ssl.create_default_context()
     ca_file = os.getenv("PG_CA_FILE")
     if ca_file and os.path.exists(ca_file):
@@ -69,6 +71,7 @@ engine = create_engine(
 
 DB_READY = False
 DB_ERROR: Optional[str] = None
+
 
 # ---------- Schema setup ----------
 def ensure_schema() -> None:
@@ -107,8 +110,9 @@ def ensure_schema() -> None:
 
 ensure_schema()
 
+
 # ---------- DB helpers ----------
-def fetch_all_tasks() -> List[Dict]:
+def fetch_all_tasks() -> List[Dict[str, Any]]:
     if not DB_READY:
         return []
     with engine.begin() as conn:
@@ -154,10 +158,11 @@ def toggle_status_db(task_id: int) -> None:
         abort(503, f"Database not ready: {DB_ERROR}")
     with engine.begin() as conn:
         row = conn.execute(
-            text("SELECT status FROM tasks WHERE id = :id"), {"id": task_id}
-        ).fetchone()
+            text("SELECT status FROM tasks WHERE id = :id"),
+            {"id": task_id},
+        ).mappings().fetchone()
     if row:
-        current = row[0] if not hasattr(row, "keys") else row["status"]
+        current = row["status"]
         new_status = "complete" if current == "pending" else "pending"
         with engine.begin() as conn:
             conn.execute(
@@ -166,7 +171,7 @@ def toggle_status_db(task_id: int) -> None:
             )
 
 
-def get_task_db(task_id: int) -> Optional[Dict]:
+def get_task_db(task_id: int) -> Optional[Dict[str, Any]]:
     if not DB_READY:
         abort(503, f"Database not ready: {DB_ERROR}")
     with engine.begin() as conn:
@@ -207,6 +212,7 @@ def clear_tasks_db() -> None:
         abort(503, f"Database not ready: {DB_ERROR}")
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM tasks"))
+
 
 # ---------- Routes ----------
 @app.route("/")
