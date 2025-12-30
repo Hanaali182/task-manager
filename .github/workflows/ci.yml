@@ -8,6 +8,7 @@ on:
     branches: [ "main" ]
 
 
+
 jobs:
   test:
     name: Lint and Test
@@ -25,18 +26,23 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          # Ensure dev tools are present
           python -m pip install flake8 pytest requests
 
       - name: Lint
         run: flake8 .
 
       - name: Run unit tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}
         run: pytest -q --disable-warnings --maxfail=1
 
       - name: Integration test (against live)
         env:
+          PYTHONPATH: ${{ github.workspace }}
           LIVE_URL: https://flask-task-manager-07es.onrender.com
         run: pytest -q tests/test_integration_system.py
+
 
           
 
