@@ -8,7 +8,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-test:
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,15 +23,23 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 pytest requests
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 
       - name: Lint
-        run: flake8 .
+        run: flake8 app.py
 
       - name: Run unit tests
-        run: pytest -q --disable-warnings --maxfail=1
+        run: |
+          export PYTHONPATH=$PWD
+          pytest -q --disable-warnings --maxfail=1
 
       - name: Build Docker image
         run: docker build -t flask-app:${{ github.sha }} .
 
+      # (Optional) Trigger Render deploy via deploy hook, if you set it up:
+      # - name: Trigger Render Deploy
+      #   if: ${{ success() }}
+      #   env:
+      #     RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
+      #   run: |
+      #     curl -X POST "$RENDER_DEPLOY_HOOK"
