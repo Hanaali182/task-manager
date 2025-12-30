@@ -8,10 +8,10 @@ from sqlalchemy.engine.url import make_url
 app = Flask(__name__)
 app.config["HOMEPAGE_MESSAGE"] = (
     "Hello from Flask + DevOps CI/CD (v2)"
-    "testing autodeploy"
 )
 
 
+# Two blank lines before top-level function (E302 fix)
 def demo_function_for_lint():
     return "lint demo"
 
