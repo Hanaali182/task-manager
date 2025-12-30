@@ -7,7 +7,6 @@ from flask import Flask, render_template, request, redirect, url_for, abort
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import make_url
 
-
 app = Flask(__name__)
 app.config["HOMEPAGE_MESSAGE"] = "Hello from Flask + DevOps CI/CD (v2)"
 
@@ -40,7 +39,6 @@ else:
     RAW_DSN = os.getenv("DATABASE_URL", "sqlite:///tasks.db")
     SQLALCHEMY_URL = normalize_dsn(RAW_DSN)
 
-
 # ---------- TLS decision for external Postgres ----------
 CONNECT_ARGS: Dict[str, object] = {}
 
@@ -54,16 +52,13 @@ except Exception:
     is_postgres = False
     is_external_render = False
 
-if is_postgres:
-    if is_external_render:
-        # External: enforce TLS verification
-        ctx = ssl.create_default_context()
-        ca_file = os.getenv("PG_CA_FILE")
-        if ca_file and os.path.exists(ca_file):
-            ctx.load_verify_locations(cafile=ca_file)
-        CONNECT_ARGS["ssl_context"] = ctx
-        CONNECT_ARGS["timeout"] = int(os.getenv("PG_TIMEOUT", "15"))
-
+if is_postgres and is_external_render:
+    ctx = ssl.create_default_context()
+    ca_file = os.getenv("PG_CA_FILE")
+    if ca_file and os.path.exists(ca_file):
+        ctx.load_verify_locations(cafile=ca_file)
+    CONNECT_ARGS["ssl_context"] = ctx
+    CONNECT_ARGS["timeout"] = int(os.getenv("PG_TIMEOUT", "15"))
 
 # ---------- Engine creation ----------
 engine = create_engine(
@@ -74,7 +69,6 @@ engine = create_engine(
 
 DB_READY = False
 DB_ERROR: Optional[str] = None
-
 
 # ---------- Schema setup ----------
 def ensure_schema() -> None:
@@ -112,7 +106,6 @@ def ensure_schema() -> None:
 
 
 ensure_schema()
-
 
 # ---------- DB helpers ----------
 def fetch_all_tasks() -> List[Dict]:
@@ -215,7 +208,6 @@ def clear_tasks_db() -> None:
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM tasks"))
 
-
 # ---------- Routes ----------
 @app.route("/")
 def index():
@@ -233,13 +225,12 @@ def index():
     total = len(tasks)
     completed = sum(1 for t in tasks if t.get("status") == "complete")
     return render_template(
-    "index.html",
-    tasks=tasks,
-    total=total,
-    completed=completed,
-    HOMEPAGE_MESSAGE=app.config["HOMEPAGE_MESSAGE"],
-)
-
+        "index.html",
+        tasks=tasks,
+        total=total,
+        completed=completed,
+        HOMEPAGE_MESSAGE=app.config["HOMEPAGE_MESSAGE"],
+    )
 
 
 @app.route("/add", methods=["POST"])
