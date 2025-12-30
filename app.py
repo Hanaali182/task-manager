@@ -8,7 +8,6 @@ app = Flask(__name__)
 app.config["HOMEPAGE_MESSAGE"] = "Hello from Flask + DevOps CI/CD (v1)"
 
 
-
 # ---------- DB selection & DSN normalization ----------
 USE_SQLITE = os.getenv("USE_SQLITE") == "1"
 
@@ -30,31 +29,42 @@ else:
     RAW_DSN = os.getenv("DATABASE_URL", "sqlite:///tasks.db")
     SQLALCHEMY_URL = normalize_dsn(RAW_DSN)
 
-# ---------- SSL context only for pg8000 ----------
-def build_ssl_context():
-    """
-    Build an SSL context for pg8000 (Render requires TLS).
-    """
-    if not SQLALCHEMY_URL.startswith("postgresql+pg8000://"):
-        return None
-    ctx = ssl.create_default_context()
-    ca_file = os.getenv("PG_CA_FILE")
-    if ca_file and os.path.exists(ca_file):
-        ctx.load_verify_locations(cafile=ca_file)
-    return ctx
-
+# ---------- Decide Internal vs External (Render) and build connect args ----------
+from sqlalchemy.engine.url import make_url
 CONNECT_ARGS = {}
-ssl_ctx = build_ssl_context()
-if ssl_ctx:
-    CONNECT_ARGS["ssl_context"] = ssl_ctx
-    CONNECT_ARGS["timeout"] = int(os.getenv("PG_TIMEOUT", "15"))
 
+try:
+    url_obj = make_url(SQLALCHEMY_URL)
+    host = url_obj.host or ""
+    is_postgres = SQLALCHEMY_URL.startswith("postgresql+pg8000://")
+    # External URLs include the public domain: ".render.com"
+    is_external_render = (".render.com" in host)
+except Exception:
+    host = ""
+    is_postgres = False
+    is_external_render = False
+
+if is_postgres:
+    if is_external_render:
+        # External: enforce TLS with certificate verification
+        import ssl
+        ctx = ssl.create_default_context()
+        ca_file = os.getenv("PG_CA_FILE")
+        if ca_file and os.path.exists(ca_file):
+            ctx.load_verify_locations(cafile=ca_file)
+        CONNECT_ARGS["ssl_context"] = ctx
+        CONNECT_ARGS["timeout"] = int(os.getenv("PG_TIMEOUT", "15"))
+    else:
+        # Internal: NO TLS context (avoids self-signed verification failure)
+        # Render’s internal network path is used; pg8000 will do plain TCP.
+        pass
+
+# ---------- Engine creation ----------
 engine = create_engine(
     SQLALCHEMY_URL,
     pool_pre_ping=True,
     connect_args=CONNECT_ARGS,
 )
-
 
 
 DB_READY = False
