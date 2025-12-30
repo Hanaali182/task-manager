@@ -3,14 +3,7 @@ import os
 import ssl
 from typing import Optional, List, Dict
 
-from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    url_for,
-    abort,
-)
+from flask import Flask, render_template, request, redirect, url_for, abort
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import make_url
 
@@ -19,8 +12,8 @@ app = Flask(__name__)
 app.config["HOMEPAGE_MESSAGE"] = "Hello from Flask + DevOps CI/CD (v2)"
 
 
-# --- small function kept for lint demo (and unit test) ---
 def demo_function_for_lint() -> str:
+    """Small function for lint/unit test demo."""
     return "lint demo"
 
 
@@ -32,13 +25,13 @@ def normalize_dsn(dsn: str) -> str:
     """
     Normalize DSN for SQLAlchemy:
     - Postgres: force pg8000 driver ("postgresql+pg8000://")
-    - SQLite stays as-is
+    - SQLite stays as-is.
     """
     if dsn.startswith("postgresql+pg8000://"):
         return dsn
     if dsn.startswith("postgresql://"):
         return dsn.replace("postgresql://", "postgresql+pg8000://", 1)
-    return dsn  # e.g., "sqlite:///..."
+    return dsn  # e.g. sqlite:///...
 
 
 if USE_SQLITE:
@@ -48,7 +41,7 @@ else:
     SQLALCHEMY_URL = normalize_dsn(RAW_DSN)
 
 
-# ---------- Decide Internal vs External (Render) ----------
+# ---------- TLS decision for external Postgres ----------
 CONNECT_ARGS: Dict[str, object] = {}
 
 try:
@@ -63,16 +56,13 @@ except Exception:
 
 if is_postgres:
     if is_external_render:
-        # External: enforce TLS with certificate verification
+        # External: enforce TLS verification
         ctx = ssl.create_default_context()
         ca_file = os.getenv("PG_CA_FILE")
         if ca_file and os.path.exists(ca_file):
             ctx.load_verify_locations(cafile=ca_file)
         CONNECT_ARGS["ssl_context"] = ctx
         CONNECT_ARGS["timeout"] = int(os.getenv("PG_TIMEOUT", "15"))
-    else:
-        # Internal networking on Render; pg8000 uses plain TCP.
-        pass
 
 
 # ---------- Engine creation ----------
@@ -88,9 +78,7 @@ DB_ERROR: Optional[str] = None
 
 # ---------- Schema setup ----------
 def ensure_schema() -> None:
-    """
-    Create schema if needed; dialect-aware for Postgres & SQLite.
-    """
+    """Create schema if needed; dialect-aware for Postgres & SQLite."""
     global DB_READY, DB_ERROR
     try:
         dialect = engine.url.get_dialect().name
@@ -141,7 +129,7 @@ def fetch_all_tasks() -> List[Dict]:
             .mappings()
             .all()
         )
-        return [dict(row) for row in rows]
+    return [dict(row) for row in rows]
 
 
 def add_task_db(
@@ -173,11 +161,9 @@ def toggle_status_db(task_id: int) -> None:
         abort(503, f"Database not ready: {DB_ERROR}")
     with engine.begin() as conn:
         row = conn.execute(
-            text("SELECT status FROM tasks WHERE id = :id"),
-            {"id": task_id},
+            text("SELECT status FROM tasks WHERE id = :id"), {"id": task_id}
         ).fetchone()
     if row:
-        # row may be Row or tuple; handle both
         current = row[0] if not hasattr(row, "keys") else row["status"]
         new_status = "complete" if current == "pending" else "pending"
         with engine.begin() as conn:
@@ -202,7 +188,7 @@ def get_task_db(task_id: int) -> Optional[Dict]:
             .mappings()
             .fetchone()
         )
-        return dict(row) if row else None
+    return dict(row) if row else None
 
 
 def edit_task_db(
@@ -216,16 +202,10 @@ def edit_task_db(
     with engine.begin() as conn:
         conn.execute(
             text(
-                "UPDATE tasks "
-                "SET title = :title, priority = :priority, due_date = :due_date "
-                "WHERE id = :id"
+                "UPDATE tasks SET title = :title, priority = :priority, "
+                "due_date = :due_date WHERE id = :id"
             ),
-            {
-                "title": title,
-                "priority": priority,
-                "due_date": due_date,
-                "id": task_id,
-            },
+            {"title": title, "priority": priority, "due_date": due_date, "id": task_id},
         )
 
 
