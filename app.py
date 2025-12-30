@@ -7,8 +7,8 @@ from sqlalchemy.engine.url import make_url
 
 app = Flask(__name__)
 app.config["HOMEPAGE_MESSAGE"] = (
-    "Hello from Flask + DevOps CI/CD (v2) - this line is wrapped to avoid "
-    "exceeding the 100-character linting limit."
+    "Hello from Flask + DevOps CI/CD (v2)"
+    "testing autodeploy"
 )
 
 
