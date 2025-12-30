@@ -232,7 +232,7 @@ def index():
     tasks = fetch_all_tasks()
     total = len(tasks)
     completed = sum(1 for t in tasks if t.get("status") == "complete")
-    return render_template("index.html", tasks=tasks, total=total, completed=completed)
+    return render_template("index.html", tasks=tasks, total=total, completed=completed, HOMEPAGE_MESSAGE=app.config["HOMEPAGE_MESSAGE"])
 
 
 @app.route("/add", methods=["POST"])

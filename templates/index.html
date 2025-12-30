@@ -13,9 +13,9 @@
             <h1>📋 Task Manager</h1>
             <p class="subtitle">Keep track of your tasks efficiently</p>
 
-            <!-- ✅ Added message from app.config -->
+            <!-- ✅ Added HOMEPAGE_MESSAGE from app.config -->
             <p style="color:#444; font-weight:bold; margin-top:8px;">
-                {{ config['HOMEPAGE_MESSAGE'] }}
+                {{ HOMEPAGE_MESSAGE }}
             </p>
         </header>
 
@@ -87,7 +87,7 @@
                         <li class="task-item {% if task.status == 'complete' %}completed{% endif %} priority-{{ task.priority.lower() }}">
                             <div class="task-content">
                                 <!-- Checkbox to mark complete -->
-                                <form method="GET" action="{{ url_for('toggle_status', task_id=loop.index0) }}" style="display:inline;">
+                                <form method="GET" action="{{ url_for('toggle_status', task_id=task.id) }}" style="display:inline;">
                                     <input 
                                         type="checkbox" 
                                         class="task-checkbox" 
@@ -112,8 +112,8 @@
 
                             <!-- Actions -->
                             <div class="task-actions">
-                                <a href="{{ url_for('edit_task', task_id=loop.index0) }}" class="btn-icon edit-btn" title="Edit task">✏️</a>
-                                <form method="GET" action="{{ url_for('delete_task', task_id=loop.index0) }}" style="display:inline;" onsubmit="return confirm('Delete this task?');">
+                                <a href="{{ url_for('edit_task', task_id=task.id) }}" class="btn-icon edit-btn" title="Edit task">✏️</a>
+                                <form method="GET" action="{{ url_for('delete_task', task_id=task.id) }}" style="display:inline;" onsubmit="return confirm('Delete this task?');">
                                     <button type="submit" class="btn-icon delete-btn" title="Delete task">🗑️</button>
                                 </form>
                             </div>
