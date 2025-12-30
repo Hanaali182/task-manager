@@ -210,5 +210,16 @@ def clear_tasks():
     clear_tasks_db()
     return redirect(url_for("index"))
 
+
+@app.route("/healthz")
+def healthz():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return "ok", 200
+    except Exception as e:
+        return f"db-fail: {e}", 503
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
