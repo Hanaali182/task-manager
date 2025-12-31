@@ -3,6 +3,7 @@ import time
 import requests
 import pytest
 
+
 @pytest.mark.integration
 def test_live_homepage():
     """
@@ -22,4 +23,3 @@ def test_live_homepage():
     assert "text/html" in ct or "<!doctype html>" in r.text.lower() or "<html" in r.text.lower(), (
         f"Unexpected content-type/body. Content-Type: {ct!r}, sample body: {r.text[:200]!r}"
     )
-
