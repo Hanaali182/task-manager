@@ -1,25 +1,26 @@
 
 import os
 import ssl
+import logging
 from typing import Optional, List, Dict, Any
 
 from flask import Flask, render_template, request, redirect, url_for, abort
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.url import make_url
 
-
-app = Flask(__name__)
+# ---------- App & logging ----------
+app = Flask(__name__, template_folder="templates", static_folder="static")
 app.config["HOMEPAGE_MESSAGE"] = "Hello from Flask + DevOps CI/CD (v2)"
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger(__name__)
 
 def demo_function_for_lint() -> str:
     """Small function for lint/unit test demo."""
     return "lint demo"
 
-
 # ---------- DB selection & DSN normalization ----------
 USE_SQLITE = os.getenv("USE_SQLITE") == "1"
-
 
 def normalize_dsn(dsn: str) -> str:
     """
@@ -33,7 +34,6 @@ def normalize_dsn(dsn: str) -> str:
         return dsn.replace("postgresql://", "postgresql+pg8000://", 1)
     return dsn  # e.g. sqlite:///...
 
-
 if USE_SQLITE:
     SQLALCHEMY_URL = "sqlite:///tasks.db"
 else:
@@ -42,7 +42,6 @@ else:
 
 # ---------- TLS decision for external Postgres ----------
 CONNECT_ARGS: Dict[str, Any] = {}
-
 try:
     url_obj = make_url(SQLALCHEMY_URL)
     host = url_obj.host or ""
@@ -72,6 +71,19 @@ engine = create_engine(
 DB_READY = False
 DB_ERROR: Optional[str] = None
 
+# ---------- Health endpoints (simple, unconditional) ----------
+@app.route("/health")
+def health():
+    return "ok", 200
+
+@app.route("/healthz")
+def healthz():
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        return "ok", 200
+    except Exception as e:  # noqa: BLE001
+        return f"db-fail: {e}", 503
 
 # ---------- Schema setup ----------
 def ensure_schema() -> None:
@@ -107,9 +119,7 @@ def ensure_schema() -> None:
         DB_READY = False
         DB_ERROR = str(e)
 
-
 ensure_schema()
-
 
 # ---------- DB helpers ----------
 def fetch_all_tasks() -> List[Dict[str, Any]]:
@@ -128,7 +138,6 @@ def fetch_all_tasks() -> List[Dict[str, Any]]:
         )
     return [dict(row) for row in rows]
 
-
 def add_task_db(
     title: str,
     priority: Optional[str] = None,
@@ -145,13 +154,11 @@ def add_task_db(
             {"title": title, "priority": priority, "due_date": due_date},
         )
 
-
 def delete_task_db(task_id: int) -> None:
     if not DB_READY:
         abort(503, f"Database not ready: {DB_ERROR}")
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM tasks WHERE id = :id"), {"id": task_id})
-
 
 def toggle_status_db(task_id: int) -> None:
     if not DB_READY:
@@ -170,7 +177,6 @@ def toggle_status_db(task_id: int) -> None:
                 {"status": new_status, "id": task_id},
             )
 
-
 def get_task_db(task_id: int) -> Optional[Dict[str, Any]]:
     if not DB_READY:
         abort(503, f"Database not ready: {DB_ERROR}")
@@ -187,7 +193,6 @@ def get_task_db(task_id: int) -> Optional[Dict[str, Any]]:
             .fetchone()
         )
     return dict(row) if row else None
-
 
 def edit_task_db(
     task_id: int,
@@ -206,13 +211,11 @@ def edit_task_db(
             {"title": title, "priority": priority, "due_date": due_date, "id": task_id},
         )
 
-
 def clear_tasks_db() -> None:
     if not DB_READY:
         abort(503, f"Database not ready: {DB_ERROR}")
     with engine.begin() as conn:
         conn.execute(text("DELETE FROM tasks"))
-
 
 # ---------- Routes ----------
 @app.route("/")
@@ -238,7 +241,6 @@ def index():
         HOMEPAGE_MESSAGE=app.config["HOMEPAGE_MESSAGE"],
     )
 
-
 @app.route("/add", methods=["POST"])
 def add_task():
     title = (request.form.get("title") or "").strip()
@@ -248,18 +250,15 @@ def add_task():
         add_task_db(title, priority, due_date)
     return redirect(url_for("index"))
 
-
 @app.route("/delete/<int:task_id>")
 def delete_task(task_id: int):
     delete_task_db(task_id)
     return redirect(url_for("index"))
 
-
 @app.route("/toggle/<int:task_id>")
 def toggle_status(task_id: int):
     toggle_status_db(task_id)
     return redirect(url_for("index"))
-
 
 @app.route("/edit/<int:task_id>", methods=["GET", "POST"])
 def edit_task(task_id: int):
@@ -277,23 +276,19 @@ def edit_task(task_id: int):
 
     return render_template("edit.html", task=task, task_id=task_id)
 
-
 @app.route("/clear", methods=["POST"], endpoint="clear_tasks")
 def clear_tasks():
     clear_tasks_db()
     return redirect(url_for("index"))
 
-
-@app.route("/healthz")
-def healthz():
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        return "ok", 200
-    except Exception as e:  # noqa: BLE001
-        return f"db-fail: {e}", 503
-
+# ---------- Startup ----------
+def log_routes() -> None:
+    rules = sorted([(r.rule, ",".join(sorted(r.methods))) for r in app.url_map.iter_rules()])
+    log.info("Registered routes:")
+    for rule, methods in rules:
+        log.info("  %s  [%s]", rule, methods)
 
 if __name__ == "__main__":
+    log_routes()
     port = int(os.environ.get("PORT", "5000"))
     app.run(host="0.0.0.0", port=port)
